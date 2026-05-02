@@ -4,29 +4,25 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import androidx.navigation.navArgument
-import com.example.firstappwithdeepseek.model.Article
 import com.example.firstappwithdeepseek.ui.screen.NewsDetailScreen
 import com.example.firstappwithdeepseek.ui.screen.NewsListScreen
 import com.example.firstappwithdeepseek.ui.viewmodel.NewsViewModel
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
 
 /**
  * Navigation routes for the app.
  */
 object Routes {
     const val NEWS_LIST = "news_list"
-    const val NEWS_DETAIL = "news_detail/{articleJson}"
+    const val NEWS_DETAIL = "news_detail"
 }
 
 /**
  * Main navigation graph for the app.
- * Uses serialized article JSON to pass data to the detail screen (no browser opening).
+ * Uses the ViewModel to share the selected article to the detail screen
+ * (avoiding serialization issues from passing JSON in route URLs).
  */
 @Composable
 fun AppNavigation() {
@@ -41,30 +37,22 @@ fun AppNavigation() {
             NewsListScreen(
                 viewModel = newsViewModel,
                 onArticleClick = { article ->
-                    val articleJson = Json.encodeToString(article)
-                    navController.navigate("news_detail/$articleJson")
+                    newsViewModel.selectArticle(article)
+                    navController.navigate(Routes.NEWS_DETAIL)
                 }
             )
         }
 
-        composable(
-            route = Routes.NEWS_DETAIL,
-            arguments = listOf(
-                navArgument("articleJson") { type = NavType.StringType }
-            )
-        ) { backStackEntry ->
-            val articleJson = backStackEntry.arguments?.getString("articleJson") ?: ""
-            val article = try {
-                Json.decodeFromString<Article>(articleJson)
-            } catch (e: Exception) {
-                null
-            }
-
-            if (article != null) {
-                NewsDetailScreen(article = article)
-            } else {
-                // Fallback: go back
-                navController.popBackStack()
+        composable(Routes.NEWS_DETAIL) {
+            val selectedArticle by newsViewModel.selectedArticle.collectAsState()
+            selectedArticle?.let { article ->
+                NewsDetailScreen(
+                    article = article,
+                    onBackClick = {
+                        newsViewModel.clearSelection()
+                        navController.popBackStack()
+                    }
+                )
             }
         }
     }

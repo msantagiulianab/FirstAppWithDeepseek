@@ -13,9 +13,8 @@ import kotlinx.serialization.json.Json
 /**
  * Network service class that fetches news from NewsAPI.org using Ktor.
  */
-class NewsApiService {
-
-    private val httpClient = HttpClient {
+class NewsApiService(
+    private val httpClient: HttpClient = HttpClient {
         install(ContentNegotiation) {
             json(Json {
                 ignoreUnknownKeys = true
@@ -24,6 +23,7 @@ class NewsApiService {
             })
         }
     }
+) {
 
     /**
      * Fetches top headline news for the given country.
